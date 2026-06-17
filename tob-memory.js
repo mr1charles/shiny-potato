@@ -126,7 +126,7 @@ function bootstrapTOBNlpExtensions() {
   if (typeof TOB_VersionManager !== "undefined" && TOB_VersionManager.init) TOB_VersionManager.init();
   if (typeof TOB_AI !== "undefined" && TOB_AI.initVoiceWakeWord) TOB_AI.initVoiceWakeWord();
   TOB_IslandAI.init();
-  console.log("TOB OS v18.0 — Dynamic Island AI Matrix ignition complete.");
+  console.log("TOB OS v19.0 — Dynamic Island AI Matrix ignition complete.");
 }
 
 if (document.readyState === "loading") {
