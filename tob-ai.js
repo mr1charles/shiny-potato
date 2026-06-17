@@ -328,7 +328,7 @@ const TOB_AI = {
   }
 };
 // ============================================================================
-// TOB OS v18.0 — DYNAMIC ISLAND AI MATRIX + MEMORY VAULT
+// TOB OS v19.0 — DYNAMIC ISLAND AI MATRIX + MEMORY VAULT
 // Anthropic API powers open-ended queries; local NLP routes OS commands.
 // Alt+Space or click the pill to activate.
 // ============================================================================
@@ -371,7 +371,7 @@ const TOB_IslandAI = {
     }, 3200);
 
     this.pushSystemMessage("TOB COGNITIVE CORE ONLINE. Pull this bar down or press Alt + Space to chat with me. Try typing: open music, check apps, or any question.");
-    console.log("TOB Island AI v18 — init complete.");
+    console.log("TOB Island AI v19 — init complete.");
   },
 
   handleIslandClick(event) {
@@ -555,3 +555,30 @@ const TOB_IslandAI = {
 // ============================================================================
 // TOB MEMORY VAULT — NATIVE WINDOW MANAGER INTEGRATION
 // ============================================================================
+
+// v19 lazy voice + layered intelligence overrides. Voice services are not started until user activation.
+(function(){
+  if(!window.TOB_AI) return;
+  const KEY='tob_voice_permission_state_v19';
+  TOB_AI.intentMap=[
+    {re:/^(hi|hello|hey|what'?s up|good morning|good afternoon|good evening)\b/i,reply:()=>`Hello. TOB v${window.TOB_VERSION||'19.0'} is online. I see ${document.querySelectorAll('.os-window').length} active app layer(s).`},
+    {re:/\b(who are you|your name|what are you)\b/i,reply:()=>`I am TOB, the local intelligence layer for TOB OS v${window.TOB_VERSION||'19.0'}.`},
+    {re:/\b(theme|preferred theme)\b/i,reply:()=>`Your current theme is ${document.documentElement.getAttribute('data-theme-id')||'fusion'}. I saved it to local memory.`}
+  ];
+  TOB_AI.rememberPreference=function(k,v){try{const m=JSON.parse(localStorage.getItem('tob_ai_user_memory_v19')||'{}');m[k]=v;localStorage.setItem('tob_ai_user_memory_v19',JSON.stringify(m));}catch(e){}};
+  const original=TOB_AI.processIntent?.bind(TOB_AI);
+  TOB_AI.processIntent=function(rawText){
+    const hit=this.intentMap.find(i=>i.re.test(rawText));
+    if(hit){ const reply=hit.reply(rawText); this.saveMemory('user',rawText); this.saveMemory('tob',reply); this.speak(reply); return reply; }
+    return original ? original(rawText) : null;
+  };
+  TOB_AI.initVoiceWakeWord=function(){ console.info('TOB v19 voice service is lazy. Call TOB_AI.activateVoiceMode() after user activation.'); };
+  TOB_AI.activateVoiceMode=async function(){
+    if(localStorage.getItem(KEY)==='denied'){ if(!localStorage.getItem(KEY+'_warned')){localStorage.setItem(KEY+'_warned','1'); showToast?.('Voice denied earlier — text mode active.');} return false; }
+    try{
+      if(navigator.mediaDevices?.getUserMedia){ const stream=await navigator.mediaDevices.getUserMedia({audio:true}); stream.getTracks().forEach(t=>t.stop()); localStorage.setItem(KEY,'granted'); }
+      const SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) throw new Error('Speech recognition unsupported');
+      const r=new SR(); r.continuous=true; r.interimResults=false; r.lang='en-US'; r.onresult=e=>this.processIntent(e.results[e.results.length-1][0].transcript); r.onerror=()=>{}; r.onend=()=>this.isListening&&r.start(); this.isListening=true; r.start(); window.TOB_Motion?.setIslandState('listening'); return true;
+    }catch(e){ localStorage.setItem(KEY,'denied'); if(!localStorage.getItem(KEY+'_warned')){localStorage.setItem(KEY+'_warned','1'); showToast?.('Microphone unavailable — switched to text mode.');} window.TOB_Motion?.setIslandState('idle'); return false; }
+  };
+})();

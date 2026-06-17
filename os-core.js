@@ -2518,7 +2518,14 @@ document.getElementById('ts-name-input')?.addEventListener('keydown',e=>{ if(e.k
 ══════════════════════════════════════════════════════════════ */
 
 /* ══ 1. STATE ══ */
-const TOB_VERSION='16.0.0';
+const TOB_VERSION = '19.0';
+window.TOB_VERSION = TOB_VERSION;
+window.TOB_VERSION_LEDGER = window.TOB_VERSION_LEDGER || [
+  {version:'19.0', title:'Unified Intelligence Update', features:['Dynamic Island 2.0','TOB Studio foundation','offline intent AI','adaptive glass performance']},
+  {version:'18.0', title:'AI Native Extensions', features:['memory vault','island chat','avatar renderer']},
+  {version:'16.0', title:'Themes, Games & Rhythm', features:['boot studio','widget lab','profile polish']},
+  {version:'14.0', title:'Personalization Update', features:["what's new",'user profiles','folders']}
+];
 const LS={
   get:(k,d=null)=>{try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch(e){return d;}},
   set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}},
@@ -2644,7 +2651,7 @@ function makeDesktopIcon(app,slot){
   return div;
 }
 function positionIcon(div,col,row){div.style.left=GRID.slotX(col)+'px';div.style.top=GRID.slotY(row)+'px';}
-function launchIcon(div,app){div.classList.add('snap-anim');setTimeout(()=>div.classList.remove('snap-anim'),250);openApp(app.id);closeStartMenuIfOpen();}
+function launchIcon(div,app){div.classList.add('snap-anim');setTimeout(()=>div.classList.remove('snap-anim'),250);window.__tobLaunchRect=div.getBoundingClientRect();openApp(app.id);closeStartMenuIfOpen();}
 
 /* Drag rearrange */
 function startIconDrag(div,app,e){
@@ -2790,7 +2797,9 @@ const WM={
     const dW=desktop.offsetWidth,dH=desktop.offsetHeight;
     const left=Math.max(10,(dW-width)/2),top=Math.max(10,Math.min((dH-height)/2,dH-height-10));
     const el=document.createElement('div');el.className='os-window focused';
-    el.style.cssText=`width:${width}px;height:${height}px;left:${left}px;top:${top}px;z-index:${++this.zCounter};`;
+    el.style.cssText=`width:${width}px;height:${height}px;left:${left}px;top:${top}px;z-index:${++this.zCounter};will-change:transform,opacity;`;
+    const launchRect=window.__tobLaunchRect; window.__tobLaunchRect=null;
+    if(launchRect && window.TOB_Motion){ window.TOB_Motion.animateWindowLaunch(el, launchRect); }
     const bar=document.createElement('div');bar.className='win-bar';
     bar.innerHTML=`<div class="win-controls"><div class="wc wc-close"></div><div class="wc wc-min"></div><div class="wc wc-max"></div></div><div class="win-title">${icon||''} ${title}</div><div style="width:44px;flex-shrink:0"></div>`;
     const body=document.createElement('div');body.className='win-body';body.style.flex='1';
@@ -2820,7 +2829,7 @@ const WM={
   },
   minimize(id){const w=this.windows.get(id);if(!w||w.state==='minimized')return;w.state='minimized';w.el.classList.add('anim-minimize');setTimeout(()=>{w.el.style.display='none';w.el.classList.remove('anim-minimize');syncTaskbar();},280);const rem=[...this.windows.values()].filter(x=>x.id!==id&&x.el.style.display!=='none');if(rem.length){const top=rem.sort((a,b)=>parseInt(b.el.style.zIndex||0)-parseInt(a.el.style.zIndex||0))[0];this.focus(top.id);}else{this.focusedId=null;setSbTitle('DESKTOP');syncTaskbar();}},
   toggleMax(id){const w=this.windows.get(id);if(!w)return;if(w.state!=='maximized'){w.prevGeom={left:w.el.style.left,top:w.el.style.top,width:w.el.style.width,height:w.el.style.height};w.state='maximized';const d=document.getElementById('desktop');Object.assign(w.el.style,{left:'0',top:'0',width:d.offsetWidth+'px',height:d.offsetHeight+'px',borderRadius:'0'});w.el.classList.add('anim-maximize');setTimeout(()=>w.el.classList.remove('anim-maximize'),220);}else{w.state='open';const g=w.prevGeom||{};Object.assign(w.el.style,{left:g.left||'40px',top:g.top||'40px',width:g.width||'700px',height:g.height||'480px',borderRadius:''});w.el.classList.add('anim-maximize');setTimeout(()=>w.el.classList.remove('anim-maximize'),220);}},
-  _makeDraggable(el,handle){let drag=false,ox,oy,sx,sy;const start=(x,y)=>{if(el.style.borderRadius==='0px')return;drag=true;ox=parseInt(el.style.left)||0;oy=parseInt(el.style.top)||0;sx=x;sy=y;};const move=(x,y)=>{if(!drag)return;const d=document.getElementById('desktop');el.style.left=Math.max(0,Math.min(d.offsetWidth-80,ox+(x-sx)))+'px';el.style.top=Math.max(0,Math.min(d.offsetHeight-40,oy+(y-sy)))+'px';};const end=()=>drag=false;handle.addEventListener('mousedown',e=>{e.preventDefault();start(e.clientX,e.clientY);});document.addEventListener('mousemove',e=>move(e.clientX,e.clientY));document.addEventListener('mouseup',end);handle.addEventListener('touchstart',e=>start(e.touches[0].clientX,e.touches[0].clientY),{passive:true});document.addEventListener('touchmove',e=>{if(drag)move(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});document.addEventListener('touchend',end);},
+  _makeDraggable(el,handle){let drag=false,ox,oy,sx,sy;const start=(x,y)=>{if(el.style.borderRadius==='0px')return;drag=true;ox=parseInt(el.style.left)||0;oy=parseInt(el.style.top)||0;sx=x;sy=y;};const move=(x,y)=>{if(!drag)return;const d=document.getElementById('desktop');const dx=x-sx,dy=y-sy;el.style.left=Math.max(0,Math.min(d.offsetWidth-80,ox+dx))+'px';el.style.top=Math.max(0,Math.min(d.offsetHeight-40,oy+dy))+'px';el.style.transform='rotateX('+Math.max(-3,Math.min(3,-dy*.02))+'deg) rotateY('+Math.max(-3,Math.min(3,dx*.02))+'deg)';document.documentElement.classList.add('glass-performance');};const end=()=>{drag=false;el.style.transform='';document.documentElement.classList.remove('glass-performance');};handle.addEventListener('mousedown',e=>{e.preventDefault();start(e.clientX,e.clientY);});document.addEventListener('mousemove',e=>move(e.clientX,e.clientY));document.addEventListener('mouseup',end);handle.addEventListener('touchstart',e=>start(e.touches[0].clientX,e.touches[0].clientY),{passive:true});document.addEventListener('touchmove',e=>{if(drag)move(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});document.addEventListener('touchend',end);},
   _makeResizable(el,rh){let r=false,sx,sy,sw,sh;rh.addEventListener('mousedown',e=>{r=true;e.preventDefault();e.stopPropagation();sx=e.clientX;sy=e.clientY;sw=el.offsetWidth;sh=el.offsetHeight;});document.addEventListener('mousemove',e=>{if(!r)return;el.style.width=Math.max(300,sw+(e.clientX-sx))+'px';el.style.height=Math.max(200,sh+(e.clientY-sy))+'px';});document.addEventListener('mouseup',()=>r=false);},
 };
 function restoreWindow(w){w.state='open';w.el.style.display='';w.el.classList.add('anim-maximize');setTimeout(()=>w.el.classList.remove('anim-maximize'),220);WM.focus(w.id);syncTaskbar();}
@@ -4158,7 +4167,7 @@ function init(){
   if(_masterGain)_masterGain.gain.value=OS.volume;
   checkVersion();initBattery();buildDesktopIcons();
   BUILTIN_MODS.forEach(m=>{const saved=LS.get('tob_mod_'+m.id,false);m.enabled=saved;if(m.enabled)applyMod(m);});
-  const msgs=['LOADING CORE MODULES...','INIT DESKTOP ENVIRONMENT...','iOS GRID SYSTEM...','LOADING APPS...','STARTING SERVICES...','TOB OS v16.0 READY.'];
+  const msgs=['LOADING CORE MODULES...','INIT DESKTOP ENVIRONMENT...','iOS GRID SYSTEM...','LOADING APPS...','STARTING SERVICES...','TOB OS v19.0 READY.'];
   let mi=0;const msgEl=document.getElementById('boot-msg');
   const mInt=setInterval(()=>{if(msgEl)msgEl.textContent=msgs[Math.min(mi++,msgs.length-1)];if(mi>=msgs.length)clearInterval(mInt);},400);
   setTimeout(()=>{const boot=document.getElementById('boot');if(boot){boot.classList.add('fade');setTimeout(()=>{boot.remove();/* initPet removed */},700);}},2600);
@@ -5322,7 +5331,7 @@ const buf=new Uint8Array(ana.frequencyBinCount);
 const out=document.getElementById('out');const cmd=document.getElementById('cmd');
 const CMDS={
   help:()=>[{t:'sys',v:'◈ AVAILABLE COMMANDS'},{t:'o',v:'  neofetch   — System info'},{t:'o',v:'  ls         — List files'},{t:'o',v:'  pwd        — Print directory'},{t:'o',v:'  whoami     — Who are you?'},{t:'o',v:'  date       — Current date/time'},{t:'o',v:'  uptime     — System uptime'},{t:'o',v:'  matrix     — Enter the matrix'},{t:'o',v:'  flip       — Flip a coin'},{t:'o',v:'  roll [N]   — Roll dice'},{t:'o',v:'  joke       — Tell a joke'},{t:'o',v:'  clear      — Clear terminal'},{t:'o',v:'  echo [msg] — Echo message'},{t:'o',v:'  color [c]  — Change accent color'}],
-  neofetch:()=>[{t:'sys',v:'     ████████████'},{t:'sys',v:'    ██  TOB OS  ██'},{t:'sys',v:'     ████████████'},{t:'o',v:'OS: TOB OS Nexus Edition v11.1'},{t:'o',v:'Kernel: WebKit 537.0'},{t:'o',v:'Shell: NeoShell v1.0'},{t:'o',v:'CPU: Browser Thread @ ∞GHz'},{t:'o',v:'RAM: '+Math.round((performance.memory?.usedJSHeapSize||0)/1048576)+'MB / '+Math.round((performance.memory?.totalJSHeapSize||0)/1048576)+'MB'},{t:'o',v:'Theme: Dark Nexus'},{t:'o',v:'Uptime: '+Math.floor(performance.now()/60000)+'m '+Math.floor((performance.now()%60000)/1000)+'s'}],
+  neofetch:()=>[{t:'sys',v:'     ████████████'},{t:'sys',v:'    ██  TOB OS  ██'},{t:'sys',v:'     ████████████'},{t:'o',v:'OS: TOB OS Nexus Edition v'+(window.TOB_VERSION||'19.0')+''},{t:'o',v:'Kernel: WebKit 537.0'},{t:'o',v:'Shell: NeoShell v1.0'},{t:'o',v:'CPU: Browser Thread @ ∞GHz'},{t:'o',v:'RAM: '+Math.round((performance.memory?.usedJSHeapSize||0)/1048576)+'MB / '+Math.round((performance.memory?.totalJSHeapSize||0)/1048576)+'MB'},{t:'o',v:'Theme: Dark Nexus'},{t:'o',v:'Uptime: '+Math.floor(performance.now()/60000)+'m '+Math.floor((performance.now()%60000)/1000)+'s'}],
   ls:()=>['Desktop/','Documents/','Downloads/','Music/','Pictures/','Mods/','TOBOS_v11.html'].map(v=>({t:'o',v:'  '+v})),
   pwd:()=>[{t:'o',v:'/home/tobos/desktop'}],
   whoami:()=>[{t:'o',v:'tobos-user (UID: 1337)'},{t:'o',v:'Groups: nexus, admin, powerusers'}],
@@ -10315,7 +10324,7 @@ function initV11Systems(){
 <div id="whats-new-overlay">
   <div class="wn-dialog">
     <div class="wn-header">
-      <div class="wn-badge">◈ VERSION 16.0.0</div>
+      <div class="wn-badge">◈ VERSION 19.0</div>
       <div class="wn-title">WHAT'S NEW</div>
       <div class="wn-sub">TOB OS · THEMES, GAMES &amp; RHYTHM EDITION</div>
     </div>
@@ -10365,6 +10374,7 @@ function initV11Systems(){
 
 <div id="dynamic-island-container" onclick="TOB_IslandAI.handleIslandClick(event)">
   <div id="island-minimal-view" class="island-content">
+    <svg class="island-face-svg" viewBox="0 0 64 32" aria-hidden="true"><circle class="island-face-eye" cx="20" cy="13" r="4" fill="var(--neon3)"/><circle class="island-face-eye" cx="44" cy="13" r="4" fill="var(--neon3)"/><path class="island-face-mouth" d="M24 23 Q32 27 40 23" fill="none" stroke="var(--neon)" stroke-width="3" stroke-linecap="round"/></svg>
     <span style="color: var(--neon); animation: pulse 2s infinite;">◈ TOB AI</span>
     <span id="island-status-text" style="color: var(--text-dim);">SYSTEM SECURE</span>
   </div>
@@ -10374,6 +10384,8 @@ function initV11Systems(){
       <span style="font-family: 'Orbitron', sans-serif; font-weight: bold; color: var(--neon); font-size: 12px; letter-spacing: 1px;">⚡ TOB COGNITIVE CORE</span>
       <button onclick="TOB_IslandAI.collapseIsland(event)" style="background:transparent; border:none; color:var(--accent); cursor:pointer; font-family:'Share Tech Mono'; font-size:11px;">[ ESC ]</button>
     </div>
+    <div class="tob-orb" aria-label="TOB AI visualizer"></div>
+    <div class="island-suggestions" id="island-suggestions"><div class="island-suggestion">Continue work</div><div class="island-suggestion">Recent apps</div><div class="island-suggestion">Optimize now</div></div>
     <div id="island-chat-log" class="island-chat-log">
       </div>
     <div class="island-chat-input-area" onclick="event.stopPropagation()">
@@ -10744,3 +10756,10 @@ const TOB_VersionManager = {
 };
 
 // ============================================================================
+
+// v19 app builders: unified Studio, Updates timeline, and hidden Core Analyzer.
+function buildTOBStudioApp(body){body.innerHTML=`<div style="height:100%;overflow:auto;padding:18px;background:var(--bg);color:var(--text)"><h2 style="font-family:Orbitron;color:var(--neon);letter-spacing:3px">TOB STUDIO</h2><p style="color:var(--text-dim);font-size:12px">Themes, Mods, Create, Assets, Store, and Settings are unified here.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px">${['Themes','Mods','Create','Assets','Store','Settings'].map(x=>`<section style="padding:14px;border:1px solid var(--panel-border);border-radius:14px;background:var(--panel);backdrop-filter:blur(12px)"><b style="color:var(--neon3)">${x}</b><p style="font-size:10px;color:var(--text-dim);margin-top:6px">Live preview and v19 package hooks.</p></section>`).join('')}</div><label style="display:block;margin-top:14px;color:var(--text-dim);font-size:11px">Blur <input type="range" min="4" max="24" value="12" oninput="document.documentElement.style.setProperty('--studio-blur',this.value+'px')"></label></div>`;}
+function buildUpdatesApp(body){const ledger=JSON.parse(localStorage.getItem('version_ledger')||'null')||window.TOB_VERSION_LEDGER||[];body.innerHTML=`<div style="height:100%;overflow:auto;padding:20px;background:linear-gradient(180deg,rgba(0,180,255,.08),transparent),var(--bg);color:var(--text)"><h2 style="font-family:Orbitron;color:var(--neon);letter-spacing:3px">TOB OS v${window.TOB_VERSION||TOB_VERSION} ROADMAP</h2><div style="margin-top:18px;border-left:2px solid var(--neon);padding-left:16px">${ledger.map(v=>`<article style="margin:0 0 16px;padding:14px;border-radius:16px;background:var(--panel);border:1px solid var(--panel-border);box-shadow:0 12px 36px rgba(0,0,0,.28)"><div style="font-family:Orbitron;color:var(--neon3);font-size:12px;letter-spacing:2px">v${v.version} · ${v.title||'Update'}</div><ul style="margin:8px 0 0 16px;color:var(--text-dim);font-size:12px;line-height:1.7">${(v.features||[]).map(f=>`<li>${f}</li>`).join('')}</ul></article>`).join('')}</div></div>`;}
+function buildCoreAnalyzerApp(body){const mem=performance.memory;const used=mem?Math.round(mem.usedJSHeapSize/1048576):482;body.innerHTML=`<div style="padding:18px;color:var(--text);font-family:Share Tech Mono,monospace"><h3 style="color:var(--neon);font-family:Orbitron">CORE ANALYZER</h3><p>System RAM: ${used}MB</p><p>Themes: 12MB</p><p>AI: 41MB</p><p>Mods: ${OS.mods.length*4+22}MB</p><p>Active modules: ${WM.windows.size}</p><p>Dynamic quality: ${used>900?'Reduced blur':'Premium glass'}</p></div>`;}
+const __openAppV19=openApp; window.openApp=openApp=function(id){ if(id==='studio') return WM.create('studio','TOB STUDIO','🎛️',820,560,buildTOBStudioApp); if(id==='updates'||id==='updatelog') return WM.create('updates','UPDATES','📋',760,560,buildUpdatesApp); if(id==='core-analyzer') return WM.create('core-analyzer','CORE ANALYZER','🧪',520,360,buildCoreAnalyzerApp); return __openAppV19(id); };
+try{BUILTIN_APPS.unshift({id:'studio',label:'TOB Studio',icon:'🎛️',color:'#06162d'},{id:'updates',label:'Updates',icon:'📋',color:'#001820'});}catch(e){}
